@@ -427,11 +427,9 @@ export default function CommunityHub({ userId }) {
       .eq("user_id", userId);
     setGroups(groupData || []);
     setMemberships(membershipData || []);
-    setActiveTab("groups");
     if (data?.id) {
-      setActiveGroupId(data.id);
-      loadGroupPosts(data.id);
-      setCreateGroupPostOpen(true);
+      const basePath = storedMode === "gym" ? `/gym/${userId || ""}` : `/athlete/${userId || ""}`;
+      navigate(`${basePath}/community/group/${data.id}`);
     }
   };
 
@@ -644,8 +642,8 @@ export default function CommunityHub({ userId }) {
       .select("*")
       .eq("user_id", userId);
     setMemberships(membershipData || []);
-    setActiveGroupId(groupId);
-    loadGroupPosts(groupId);
+    const basePath = storedMode === "gym" ? `/gym/${userId || ""}` : `/athlete/${userId || ""}`;
+    navigate(`${basePath}/community/group/${groupId}`);
   };
 
 // accept an incoming friend request,
@@ -1265,26 +1263,33 @@ export default function CommunityHub({ userId }) {
 
           {activeTab === "groups" && (
             <div className="community-panel">
-              <div className="community-panel-title">Groups</div>
+              <div className="community-panel-title">Joined Groups</div>
               <div className="community-group-list">
-                {groups.map((group) => {
-                  const joined = memberships.some((item) => item.group_id === group.id);
-                  return (
-                    <button
-                      key={group.id}
-                      className={`community-forum-item ${activeGroupId === group.id ? "active" : ""}`}
-                      onClick={() => {
-                        setActiveGroupId(group.id);
-                        loadGroupPosts(group.id);
-                      }}
-                      type="button"
-                    >
-                      <div className="community-forum-title">{group.name}</div>
-                      <div className="community-forum-sub">{joined ? "Joined" : "Not joined"}</div>
-                    </button>
-                  );
-                })}
-                {!groups.length && <div className="community-empty">No groups yet.</div>}
+                {groups
+                  .filter((group) => memberships.some((m) => m.group_id === group.id))
+                  .map((group) => {
+                    const basePath = storedMode === "gym" ? `/gym/${userId || ""}` : `/athlete/${userId || ""}`;
+                    return (
+                      <button
+                        key={group.id}
+                        className="community-forum-item community-group-joined-item"
+                        onClick={() => navigate(`${basePath}/community/group/${group.id}`)}
+                        type="button"
+                      >
+                        <div className="community-group-joined-icon">
+                          {group.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="community-forum-title">{group.name}</div>
+                          <div className="community-forum-sub">{group.goal || "No goal set"}</div>
+                        </div>
+                        <span className="community-group-chevron">&rsaquo;</span>
+                      </button>
+                    );
+                  })}
+                {!groups.filter((g) => memberships.some((m) => m.group_id === g.id)).length && (
+                  <div className="community-empty">You haven't joined any groups yet.</div>
+                )}
               </div>
               <div className="community-forum-actions">
                 <button className="hud-secondary-btn" onClick={() => setCreateGroupOpen(true)}>
@@ -1416,51 +1421,50 @@ export default function CommunityHub({ userId }) {
           {/* and includes a perks summary below */}
           {activeTab === "groups" && (
             <div className="community-panel">
-              <div className="community-panel-title">
-                {activeGroup?.name ? `Group Chat - ${activeGroup.name}` : "Group Chat"}
-              </div>
-              {activeGroupId ? (
-                <>
-                  {!isMember && (
-                    <div className="community-chat-actions">
-                      <button className="hud-secondary-btn" onClick={() => handleJoinGroup(activeGroupId)}>
-                        Join group
-                      </button>
-                    </div>
-                  )}
-                  {isMember && (
-                    <div className="community-chat-actions">
-                      <button className="hud-secondary-btn" onClick={() => setCreateGroupPostOpen(true)}>
-                        Send message
-                      </button>
-                    </div>
-                  )}
-                  <div className="community-chat-list">
-                    {groupPosts.map((post) => (
-                      <div key={post.id} className="community-chat-message">
-                        <div className="community-chat-body">{post.body}</div>
-                        <div className="community-chat-meta">
-                          {profiles[post.created_by] || post.created_by || "Anonymous"} - {formatTime(post.created_at)}
+              <div className="community-panel-title">Discover Groups</div>
+              <div className="community-discover-grid">
+                {groups
+                  .filter((group) => !memberships.some((m) => m.group_id === group.id))
+                  .map((group) => (
+                    <div key={group.id} className="community-discover-card">
+                      <div className="community-discover-card-icon">
+                        {group.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="community-discover-card-info">
+                        <div className="community-feed-title">{group.name}</div>
+                        <div className="community-feed-sub">{group.goal || "No goal set"}</div>
+                        <div className="community-discover-card-meta">
+                          <span className="community-discover-privacy">{group.privacy || "open"}</span>
                         </div>
                       </div>
-                    ))}
-                    {!groupPosts.length && (
-                      <div className="community-empty">
-                        {isMember ? "No messages yet. Start the chat." : "Join the group to see the chat."}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="community-empty">Select a group to open the chat.</div>
-              )}
-              <div className="community-panel-title" style={{ marginTop: 16 }}>
+                      <button
+                        className="hud-secondary-btn community-discover-join-btn"
+                        onClick={() => handleJoinGroup(group.id)}
+                      >
+                        Join
+                      </button>
+                    </div>
+                  ))}
+                {!groups.filter((g) => !memberships.some((m) => m.group_id === g.id)).length && (
+                  <div className="community-empty">No new groups to discover. Create one!</div>
+                )}
+              </div>
+              <div className="community-panel-title" style={{ marginTop: 24 }}>
                 Perks
               </div>
-              <div className="community-perks">
-                <div>Weekly accountability pings</div>
-                <div>Shared goal tracking</div>
-                <div>Group-only challenges</div>
+              <div className="community-perks-grid">
+                <div className="community-perk-card">
+                  <div className="community-perk-icon">&#9889;</div>
+                  <div className="community-perk-label">Weekly accountability pings</div>
+                </div>
+                <div className="community-perk-card">
+                  <div className="community-perk-icon">&#127919;</div>
+                  <div className="community-perk-label">Shared goal tracking</div>
+                </div>
+                <div className="community-perk-card">
+                  <div className="community-perk-icon">&#127942;</div>
+                  <div className="community-perk-label">Group-only challenges</div>
+                </div>
               </div>
             </div>
           )}

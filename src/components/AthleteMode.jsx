@@ -7,6 +7,7 @@ import Navbar from "./Navbar";
 import JournalPage from "./JournalPage";
 import AthleteTrainingTab from "./AthleteTrainingTab";
 import CommunityHub from "./CommunityHub";
+import GroupPage from "./GroupPage";
 import WorkoutProgram from "./WorkoutProgram";
 // Component: AthleteMode - UI layout and interactions.
 // This component renders the athletemode experience and wires up its local UI state.
@@ -346,6 +347,10 @@ export default function AthleteMode() {
         <Route
           path="community"
           element={<CommunityHub userId={id} />}
+        />
+        <Route
+          path="community/group/:groupId"
+          element={<GroupPage userId={id} />}
         />
       </Routes>
     </div>
